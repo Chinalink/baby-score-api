@@ -3,6 +3,9 @@ const express = require('express')
 // 创建express实例
 const app = express()
 
+app.use(express.json())
+app.use(express.urlencoded({ extended: false }))
+
 // 注册路由
 require('./routes')(app)
 

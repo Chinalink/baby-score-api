@@ -1,13 +1,113 @@
 const pool = require('./db')
+const utils = require('../utils')
 
-// 查询
+// 查询用户身份列表
 exports.getAllType = async () => {
-  let sql = 'SELECT * FROM user_type' // 要执行的SQL语句
+  let sql = 'select * from user_type'
   try {
-    const [rows, fields] = await pool.query(sql) // rows返回查询结果，fields返回该表的字段名数组，一般用不到
-    return Promise.resolve(rows) //执行成功，返回数据集
+    const [rows] = await pool.query(sql)
+    return rows
   } catch (error) {
-    console.log('error:', error)
-    return Promise.reject(error) //执行失败，返回错误信息
+    throw { message: '查询失败，请稍后重试' }
+  }
+}
+
+// 发送邮箱验证码
+exports.sendEmailCode = async email => {
+  try {
+    // 生成验证码，过期时间
+    const { code, expiresAt } = utils.generateCode()
+    // 查询当前邮箱是否被注册
+    const [users] = await this.findUser('email', email)
+
+    if (users && users.length > 0) {
+      // 保存登录验证码
+      let updateSQL = `update user set code=?, expires_at=? where email='${email}'`
+      await pool.query(updateSQL, [code, expiresAt, email])
+    } else {
+      // 每次发送之前先清空之前保存的临时验证码
+      await this.deleteCode(email)
+      // 保存注册验证码
+      let saveSQL = `insert into temp_user_code(email, code, expires_at) values(?,?,?)`
+      await pool.query(saveSQL, [email, code, expiresAt])
+    }
+    // 发送邮件
+    const mailOptin = utils.generateMailOptions(email, code, expiresAt)
+    const transporter = utils.transporter()
+    await transporter.sendMail(mailOptin)
+    return null
+  } catch (error) {
+    throw { message: '验证码发送失败，请重新尝试' }
+  }
+}
+
+// 注册用户
+exports.register = async (email, code, type_id) => {
+  try {
+    // 查询邮箱是否已被注册
+    const users = await this.findUser('email', email)
+    if (users.length > 0) {
+      throw { status: 200, message: '该邮箱已被注册' }
+    } else {
+      const isTrue = await this.verifyCode(email, code)
+
+      if (!isTrue) {
+        throw { status: 200, message: '验证码错误或已过期' }
+      }
+
+      let createSQL = 'insert into user (email, type_id) value(?,?)'
+      const [results] = await pool.query(createSQL, [email, type_id])
+      if (results.affectedRows === 1) {
+        // 注册成功，删除临时保存的验证码
+        await this.deleteCode(email)
+        return null
+      }
+    }
+  } catch (error) {
+    throw { message: '注册失败，请稍后重试' }
+  }
+}
+
+// 校验验证码
+exports.verifyCode = async (email, code, type = 'register') => {
+  try {
+    let sql = `select * from ${
+      type == 'register' ? 'temp_user_code' : 'user'
+    } where email = '${email}' and expires_at > NOW()`
+    const [rows] = await pool.query(sql, [email])
+
+    if (rows.length === 0) {
+      return false
+    }
+    // 比较验证码
+    const storeCode = rows[0].code
+    if (storeCode === code) {
+      return true
+    }
+    return false
+  } catch (error) {
+    throw { code: -8, message: '服务器内部错误，请稍后重试' }
+  }
+}
+
+// 查询用户
+exports.findUser = async (findType, data) => {
+  let sql = `select * from user where ${findType} = ?`
+
+  try {
+    const [rows] = await pool.query(sql, [data])
+    return rows
+  } catch (error) {
+    throw { code: -9, message: '服务器内部错误，请稍后重试' }
+  }
+}
+
+// 删除验证码
+exports.deleteCode = async email => {
+  try {
+    let deleteSQL = `delete from temp_user_code where email='${email}'`
+    await pool.query(deleteSQL, [email])
+  } catch (error) {
+    throw { code: -10, message: '服务器内部错误，请稍后重试' }
   }
 }

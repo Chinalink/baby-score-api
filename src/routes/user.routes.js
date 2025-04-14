@@ -1,9 +1,13 @@
 const express = require('express')
-const users = require('../controllers/user.controller')
+const userController = require('../controllers/user.controller')
 // 创建路由对象
 const router = express.Router()
 
-// 获取用户分类
-router.get('/type', users.findAllType)
+// 查询用户身份列表
+router.get('/type', userController.findAllType)
+// 注册
+router.post('/register', userController.register)
+// 发送验证
+router.post('/sendEmaliCode', userController.sendEmailCode)
 
 module.exports = router
