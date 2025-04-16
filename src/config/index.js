@@ -1,9 +1,21 @@
+const dotenv = require('dotenv')
+dotenv.config()
+
 module.exports = {
   dbConfig: {
-    host: '192.168.1.14', // 数据库地址
-    port: '8996', // 端口
-    user: 'root', // 用户名
-    password: 'root', //密码
-    database: 'star_baby', //数据库名称
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
+  },
+  emailConfig: {
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_SECURE,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
   },
 }
