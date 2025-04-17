@@ -49,11 +49,12 @@ exports.register = async (email, code, type_id) => {
 
     let createSQL = 'insert into user (email, type_id) value(?,?)'
     const [results] = await pool.query(createSQL, [email, type_id])
-    if (results.affectedRows === 1) {
-      // 注册成功，删除临时保存的验证码
-      await this.deleteCode(email)
-      return null
+    if (results.affectedRows !== 1) {
+      throw createError('注册失败，请稍后重试')
     }
+    // 注册成功，删除临时保存的验证码
+    await this.deleteCode(email)
+    return null
   }
 }
 
@@ -86,4 +87,24 @@ exports.findUser = async (findType, data) => {
 exports.deleteCode = async email => {
   let deleteSQL = `delete from temp_user_code where email='${email}'`
   await pool.query(deleteSQL, [email])
+}
+
+// 创建宝贝
+exports.createBaby = async (name, sex, score, parent_id) => {
+  let sql = 'insert into user_baby (name, sex, score, parent_id) values(?, ?, ?, ?)'
+  const [results] = await pool.query(sql, [name, sex, score, parent_id])
+  if (results.affectedRows !== 1) {
+    throw createError('创建失败，请稍后重试')
+  }
+  return null
+}
+
+// 删除宝贝
+exports.deleteBaby = async id => {
+  let sql = 'delete from user_baby where id = ?'
+  const [results] = await pool.query(sql, [id])
+  if (results.affectedRows !== 1) {
+    throw createError('删除失败，请稍后重试')
+  }
+  return null
 }

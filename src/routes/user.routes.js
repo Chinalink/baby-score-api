@@ -10,9 +10,13 @@ const router = express.Router()
 
 // 查询用户身份列表
 router.get('/type', asyncHandler(userController.findAllType))
-// 注册
+// 邮箱注册
 router.post('/register', validator.body(userSchema.register), asyncHandler(userController.register))
-// 发送验证
+// 发送验证码
 router.post('/sendEmaliCode', validator.body(userSchema.sendEmailCode), asyncHandler(userController.sendEmailCode))
+// 创建宝贝
+router.post('/createBaby', validator.body(userSchema.createBaby), asyncHandler(userController.createBaby))
+// 删除宝贝
+router.delete('/baby/:id', validator.params(userSchema.id), asyncHandler(userController.deleteBaby))
 
 module.exports = router
